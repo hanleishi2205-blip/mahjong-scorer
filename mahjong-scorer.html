@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>川麻血战到底</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --orange:#FF7D00;
+  --bg:#E8E8E8;
+  --white:#FFFFFF;
+  --green:#15803D;
+  --red:#DC2626;
+  --text:#0D0D0D;
+  --muted:#909090;
+  --card-shadow:0 2px 0 rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  --orange-glow:0 4px 18px rgba(255,125,0,.32);
+}
+
+html,body{
+  height:100%;background:var(--bg);
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;
+  color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden
+}
+
+.screen{display:none;flex-direction:column;height:100vh;overflow:hidden}
+.screen.active{display:flex}
+
+/* ════════════════════════════════
+   SETUP
+════════════════════════════════ */
+#screen-setup{
+  height:auto;min-height:100vh;overflow-y:auto;
+  padding:0 16px 32px;max-width:440px;margin:0 auto;width:100%
+}
+
+/* 标题行：左边标题，右边房间码 */
+.setup-hero{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 0 12px
+}
+.setup-hero h1{
+  font-size:22px;font-weight:900;letter-spacing:-0.5px;
+  background:linear-gradient(135deg,#FF7D00,#FF9D40);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent
+}
+.setup-hero .tagline{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-top:3px
+}
+.setup-hero .sh-room{text-align:right;flex-shrink:0;margin-left:10px}
+.setup-hero .sh-room-label{
+  font-size:8px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:2px
+}
+.setup-hero .sh-room-code{
+  font-size:20px;font-weight:900;color:var(--orange);letter-spacing:4px
+}
+
+.setup-players{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+
+.spc{background:var(--white);border-radius:14px;padding:10px 14px;box-shadow:var(--card-shadow)}
+.spc-row{display:flex;align-items:center;margin-bottom:8px}
+.spc-idx{
+  width:22px;height:22px;border-radius:7px;background:#F2F2F2;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:var(--muted);
+  margin-right:9px;flex-shrink:0;transition:all .2s
+}
+.spc.ready .spc-idx{background:var(--orange);color:#fff}
+.spc-inp{
+  flex:1;border:none;background:transparent;
+  font-size:14px;font-weight:700;color:var(--text);
+  outline:none;min-width:0
+}
+.spc-inp::placeholder{color:#ccc;font-weight:400}
+.dir-row{display:flex;gap:5px}
+.dir-btn{
+  flex:1;height:33px;border:2px solid #E8E8E8;border-radius:9px;
+  background:#F6F6F6;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer
+}
+.dir-btn.chosen{background:var(--orange);border-color:var(--orange);color:#fff}
+.dir-btn.taken{opacity:.22;cursor:not-allowed}
+
+/* ── 房规设置卡片 ── */
+.rules-card{
+  background:var(--white);border-radius:16px;padding:12px 14px 10px;
+  box-shadow:var(--card-shadow);margin-bottom:10px
+}
+.rc-title{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);font-weight:700;margin-bottom:10px;display:block
+}
+.rc-section{margin-bottom:10px}
+.rc-section:last-child{margin-bottom:0}
+.rc-label{
+  font-size:10px;font-weight:700;color:var(--muted);
+  margin-bottom:7px;display:flex;align-items:center;gap:5px
+}
+.rc-label .rc-hint{font-weight:500;font-size:9px;color:#C0C0C0}
+.rc-divider{height:1px;background:#F2F2F2;margin:10px 0}
+
+/* selector buttons (base score + liuju penalty) */
+.base-row{display:flex;gap:6px}
+.base-btn{
+  flex:1;height:36px;border:2px solid #E8E8E8;border-radius:10px;
+  background:#F6F6F6;font-size:13px;font-weight:900;color:var(--muted);
+  cursor:pointer;transition:all .12s;
+  box-shadow:0 2px 0 #D0D0D0,inset 0 1px 0 rgba(255,255,255,.8)
+}
+.base-btn.sel{
+  background:var(--orange);border-color:var(--orange);color:#fff;
+  box-shadow:0 3px 0 #C04800,inset 0 1px 0 rgba(255,200,100,.5)
+}
+.base-btn:not(.sel):active{transform:translateY(1px);box-shadow:0 1px 0 #D0D0D0}
+
+/* toggle switch */
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;cursor:pointer
+}
+.tr-info .tr-label{font-size:13px;font-weight:700;color:var(--text)}
+.tr-info .tr-sub{font-size:10px;color:#C0C0C0;margin-top:2px}
+.tog{position:relative;width:44px;height:26px;flex-shrink:0}
+.tog input{position:absolute;opacity:0;width:0;height:0}
+.tog-track{
+  position:absolute;inset:0;border-radius:13px;
+  background:#DCDCDC;transition:background .2s
+}
+.tog input:checked ~ .tog-track{background:var(--orange)}
+.tog-track::after{
+  content:'';position:absolute;
+  width:20px;height:20px;top:3px;left:3px;
+  border-radius:50%;background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.2);
+  transition:transform .2s
+}
+.tog input:checked ~ .tog-track::after{transform:translateX(18px)}
+
+.btn-go{
+  width:100%;height:50px;background:var(--orange);border:none;
+  border-radius:14px;font-size:16px;font-weight:900;color:#fff;
+  cursor:pointer;box-shadow:var(--orange-glow);letter-spacing:.5px
+}
+.btn-go:disabled{opacity:.35;box-shadow:none;cursor:not-allowed}
+.btn-go:not(:disabled):active{transform:scale(.97)}
+
+/* ════════════════════════════════
+   GAME TOPBAR
+════════════════════════════════ */
+.game-bar{
+  background:var(--white);padding:10px 18px;
+  display:flex;justify-content:space-between;align-items:center;
+  box-shadow:0 1px 0 rgba(0,0,0,.08);flex-shrink:0;z-index:1
+}
+.gb-left{display:flex;align-items:baseline;gap:6px}
+.gb-round{font-size:20px;font-weight:900;letter-spacing:-0.5px}
+.gb-room{font-size:11px;color:var(--muted)}
+.gb-room span{font-weight:800;color:var(--orange);letter-spacing:2px}
+.gb-stats{font-size:12px;color:var(--muted);text-align:right}
+.gb-stats b{color:var(--text);font-weight:800}
+
+/* ════════════════════════════════
+   2x2 PLAYER GRID
+════════════════════════════════ */
+.player-grid{
+  flex:1;min-height:0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:8px;padding:8px
+}
+
+.pm{
+  background:var(--white);border-radius:18px;
+  padding:13px 13px 11px;
+  display:flex;flex-direction:column;
+  box-shadow:var(--card-shadow);
+  overflow:hidden;min-height:0;
+  position:relative;transition:opacity .25s
+}
+.pm.won{opacity:.46}
+.pm.leader{background:#0D0D0D}
+
+/* accent bar top */
+.pm::before{
+  content:'';position:absolute;top:0;left:16px;right:16px;
+  height:3px;border-radius:0 0 3px 3px;
+  background:transparent
+}
+.pm.leader::before{background:var(--orange)}
+
+/* header row */
+.pm-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.pm-dir{
+  font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);background:#F4F4F4;
+  padding:3px 7px;border-radius:20px
+}
+.pm.leader .pm-dir{background:rgba(255,255,255,.12);color:rgba(255,255,255,.55)}
+.pm-rank{font-size:10px;font-weight:900;color:var(--muted)}
+.pm.leader .pm-rank{color:var(--orange)}
+
+/* name */
+.pm-name{
+  font-size:14px;font-weight:800;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:2px;color:var(--text)
+}
+.pm.leader .pm-name{color:#fff}
+.won-chip{
+  display:inline-block;font-size:8px;font-weight:800;
+  background:var(--orange);color:#fff;
+  padding:1px 5px;border-radius:20px;margin-left:4px;
+  vertical-align:middle
+}
+
+/* score */
+.pm-score{
+  font-size:clamp(26px, 7vw, 38px);font-weight:900;
+  line-height:1.05;letter-spacing:-1px;
+  margin:3px 0 8px
+}
+.pm-score.pos{color:var(--green)}
+.pm-score.neg{color:var(--red)}
+.pm-score.zer{color:#C0C0C0}
+.pm.leader .pm-score{color:#fff}
+
+/* divider */
+.pm-line{height:1px;background:#F0F0F0;margin-bottom:6px;flex-shrink:0}
+.pm.leader .pm-line{background:rgba(255,255,255,.1)}
+
+/* history log */
+.pm-log{
+  flex:1;min-height:0;
+  display:flex;flex-direction:column;gap:2px;overflow:hidden
+}
+.pm-log-empty{font-size:10px;color:#CCC;padding-top:2px}
+.pm.leader .pm-log-empty{color:rgba(255,255,255,.25)}
+
+.pli{
+  display:flex;align-items:center;gap:5px;
+  font-size:10px;flex-shrink:0
+}
+.pli-d{
+  flex-shrink:0;font-weight:800;font-size:11px;
+  width:36px;text-align:right
+}
+.pli-d.pos{color:var(--green)}.pli-d.neg{color:var(--red)}
+.pm.leader .pli-d.pos{color:#4ADE80}.pm.leader .pli-d.neg{color:#FCA5A5}
+.pli-t{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.pm.leader .pli-t{color:rgba(255,255,255,.45)}
+.pli-r{
+  flex-shrink:0;font-size:9px;color:#CCC;
+  background:#F6F6F6;padding:1px 5px;border-radius:10px
+}
+.pm.leader .pli-r{background:rgba(255,255,255,.1);color:rgba(255,255,255,.35)}
+
+/* ════════════════════════════════
+   ACTION PANEL — RETRO KEYBOARD
+════════════════════════════════ */
+.action-panel{
+  /* keyboard chassis */
+  background:#D4D4D4;
+  border-top:2px solid #C0C0C0;
+  padding:12px 10px 20px;flex-shrink:0;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.07)
+}
+.ap-label{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:#A8A8A8;margin-bottom:9px;padding:0 2px;font-weight:700
+}
+.ap-grid{display:grid;gap:7px;margin-bottom:7px}
+.ap-grid.g5{grid-template-columns:repeat(5,1fr)}
+.ap-grid.g4{grid-template-columns:repeat(4,1fr)}
+.ap-grid.g3{grid-template-columns:repeat(3,1fr)}
+
+/* ── Base keycap ── */
+.ab{
+  padding:15px 2px;border:none;border-radius:9px;
+  font-size:12px;font-weight:900;cursor:pointer;
+  position:relative;letter-spacing:.2px;
+  /* Press animation: translate down + collapse shadow */
+  transition:transform .06s ease,box-shadow .06s ease
+}
+.ab:active{transform:translateY(4px) !important}
+
+/* ── Win keycaps — warm amber ── */
+.ab-win{
+  background:linear-gradient(175deg,#FFF5E8 20%,#FFE0B0 100%);
+  color:#A84000;
+  box-shadow:
+    0 5px 0 #B06028,          /* key wall depth */
+    inset 0 1px 0 rgba(255,255,255,.75), /* top highlight */
+    inset 0 -2px 0 rgba(0,0,0,.08)       /* bottom inner shadow */
+}
+.ab-win:active{
+  box-shadow:0 1px 0 #B06028,inset 0 1px 0 rgba(255,255,255,.5)
+}
+
+/* ── Gang keycaps — slate blue ── */
+.ab-gang{
+  background:linear-gradient(175deg,#EEF3FF 20%,#CDDAFF 100%);
+  color:#1D3FAA;
+  box-shadow:
+    0 5px 0 #3A58A8,
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -2px 0 rgba(0,0,0,.07)
+}
+.ab-gang:active{
+  box-shadow:0 1px 0 #3A58A8,inset 0 1px 0 rgba(255,255,255,.5)
+}
+
+/* ── Special keycaps — violet ── */
+.ab-sp{
+  background:linear-gradient(175deg,#F5EEFF 20%,#E0C8FF 100%);
+  color:#5B10A8;
+  box-shadow:
+    0 5px 0 #7030B0,
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -2px 0 rgba(0,0,0,.07)
+}
+.ab-sp:active{
+  box-shadow:0 1px 0 #7030B0,inset 0 1px 0 rgba(255,255,255,.5)
+}
+
+/* ── Danger keycaps — red ── */
+.ab-danger{
+  background:linear-gradient(175deg,#FFF0EE 20%,#FFD0CC 100%);
+  color:#A81010;
+  box-shadow:
+    0 5px 0 #B03030,
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -2px 0 rgba(0,0,0,.07)
+}
+.ab-danger:active{
+  box-shadow:0 1px 0 #B03030,inset 0 1px 0 rgba(255,255,255,.5)
+}
+
+/* ── Undo — neutral ── */
+.ab-undo{
+  background:linear-gradient(175deg,#F6F6F6 20%,#E4E4E4 100%);
+  color:#888;
+  box-shadow:
+    0 5px 0 #A0A0A0,
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 -2px 0 rgba(0,0,0,.06)
+}
+.ab-undo:active{
+  box-shadow:0 1px 0 #A0A0A0,inset 0 1px 0 rgba(255,255,255,.6)
+}
+
+/* ── Next round — orange (Enter key) ── */
+.ab-next{
+  background:linear-gradient(175deg,#FF9840 20%,#FF6A00 100%);
+  color:#fff;
+  box-shadow:
+    0 5px 0 #BE4000,
+    inset 0 1px 0 rgba(255,210,120,.6),
+    inset 0 -2px 0 rgba(0,0,0,.15)
+}
+.ab-next:active{
+  box-shadow:0 1px 0 #BE4000,inset 0 1px 0 rgba(255,210,120,.4)
+}
+
+/* ── End game — dark (Esc key) ── */
+.ab-end{
+  background:linear-gradient(175deg,#3A3A3A 20%,#161616 100%);
+  color:#fff;
+  box-shadow:
+    0 5px 0 #000000,
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -2px 0 rgba(0,0,0,.4)
+}
+.ab-end:active{
+  box-shadow:0 1px 0 #000,inset 0 1px 0 rgba(255,255,255,.08)
+}
+
+/* ── Custom pay — green ── */
+.ab-custom{
+  background:linear-gradient(175deg,#EEFBF2 20%,#C0EDCE 100%);
+  color:#0E6E30;
+  box-shadow:
+    0 5px 0 #1A7A38,
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -2px 0 rgba(0,0,0,.07)
+}
+.ab-custom:active{
+  box-shadow:0 1px 0 #1A7A38,inset 0 1px 0 rgba(255,255,255,.5)
+}
+
+/* ════════════════════════════════
+   MODAL
+════════════════════════════════ */
+.modal-bg{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.5);z-index:50;
+  align-items:flex-end;justify-content:center
+}
+.modal-bg.open{display:flex}
+.msheet{
+  background:var(--white);border-radius:24px 24px 0 0;
+  width:100%;max-width:440px;
+  padding:20px 16px 28px;
+  animation:up .2s ease-out;
+  max-height:85vh;overflow-y:auto
+}
+@keyframes up{from{transform:translateY(100%);opacity:.4}to{transform:translateY(0);opacity:1}}
+.mt{font-size:18px;font-weight:900;text-align:center;margin-bottom:3px}
+.mh{font-size:12px;color:var(--muted);text-align:center;margin-bottom:15px}
+
+.mgrid{display:grid;gap:8px;margin-bottom:10px}
+.mgrid.g1{grid-template-columns:1fr}
+.mgrid.g2{grid-template-columns:1fr 1fr}
+.mgrid.g3{grid-template-columns:repeat(3,1fr)}
+.mgrid.g4{grid-template-columns:repeat(4,1fr)}
+
+.mb{
+  padding:16px 6px;border:none;border-radius:14px;
+  font-size:15px;font-weight:800;cursor:pointer;
+  background:#F2F2F2;color:var(--text);text-align:center;
+  transition:transform .08s
+}
+.mb:active{transform:scale(.94)}
+.mb.org{background:var(--orange);color:#fff;box-shadow:var(--orange-glow)}
+.mb.dark{background:var(--text);color:#fff}
+.mb.sel{background:var(--orange);color:#fff}
+.mb-s{display:block;font-size:10px;font-weight:500;margin-top:3px;opacity:.65}
+.mb.sel .mb-s,.mb.org .mb-s{opacity:.7;color:rgba(255,255,255,.8)}
+
+.fan-hero{text-align:center;padding:8px 0 12px}
+.fan-hero .fh-n{font-size:44px;font-weight:900;color:var(--orange);line-height:1}
+.fan-hero .fh-l{font-size:11px;color:var(--muted);margin-top:4px}
+
+.mcancel{
+  width:100%;padding:13px;border:none;border-radius:13px;
+  font-size:14px;font-weight:700;background:#F2F2F2;color:var(--muted);cursor:pointer;margin-top:5px
+}
+.mconfirm{
+  width:100%;padding:15px;border:none;border-radius:14px;
+  font-size:16px;font-weight:900;background:var(--orange);color:#fff;
+  cursor:pointer;margin-top:10px;box-shadow:var(--orange-glow)
+}
+.mconfirm:disabled{opacity:.36;box-shadow:none;cursor:not-allowed}
+
+/* liuju */
+.lj-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 0;border-bottom:1px solid #F4F4F4
+}
+.lj-item:last-of-type{border:none}
+.lj-info .lj-name{font-size:15px;font-weight:700}
+.lj-info .lj-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.lj-btns{display:flex;gap:7px}
+.lj-btn{padding:8px 13px;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;background:#F2F2F2;color:var(--muted)}
+.lj-btn.sh{background:var(--green);color:#fff}
+.lj-btn.sn{background:var(--red);color:#fff}
+
+/* ════════════════════════════════
+   END SCREEN
+════════════════════════════════ */
+#screen-end{
+  height:auto;min-height:100vh;overflow-y:auto;
+  padding:0 16px 32px;max-width:440px;margin:0 auto;width:100%
+}
+.end-hero{text-align:center;padding:40px 0 28px}
+.end-hero h2{font-size:32px;font-weight:900;letter-spacing:-1px}
+.end-hero p{font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:.5px}
+
+.end-list{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.ecard{
+  background:var(--white);border-radius:16px;padding:16px 18px;
+  display:flex;align-items:center;box-shadow:var(--card-shadow)
+}
+.ecard.top{background:var(--text)}
+.ec-rank{font-size:24px;font-weight:900;width:36px;flex-shrink:0}
+.ecard.top .ec-rank{color:var(--orange)}
+.ec-info{flex:1;margin:0 12px}
+.ec-name{font-size:17px;font-weight:800}
+.ecard.top .ec-name{color:#fff}
+.ec-dir{font-size:11px;color:var(--muted);margin-top:2px}
+.ecard.top .ec-dir{color:rgba(255,255,255,.45)}
+.ec-score{font-size:30px;font-weight:900;flex-shrink:0}
+.ec-score.pos{color:var(--green)}.ec-score.neg{color:var(--red)}.ec-score.zer{color:#bbb}
+.ecard.top .ec-score{color:#fff}
+
+/* end history summary */
+.ec-hist{margin-top:12px;padding-top:10px;border-top:1px solid #F0F0F0}
+.ecard.top .ec-hist{border-color:rgba(255,255,255,.1)}
+.ec-hist-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.ec-hist-row:last-child{margin:0}
+.ec-hist-label{color:var(--muted)}
+.ecard.top .ec-hist-label{color:rgba(255,255,255,.4)}
+.ec-hist-val{font-weight:700}
+.ecard.top .ec-hist-val{color:#fff}
+
+.btn-new{
+  width:100%;height:56px;background:var(--orange);border:none;
+  border-radius:16px;font-size:17px;font-weight:900;color:#fff;
+  cursor:pointer;box-shadow:var(--orange-glow);margin-bottom:32px
+}
+.btn-new:active{transform:scale(.97)}
+
+/* ════════════════════════════════
+   TOAST
+════════════════════════════════ */
+#toast{
+  position:fixed;top:16px;left:50%;
+  transform:translateX(-50%) translateY(-80px);
+  background:rgba(13,13,13,.92);color:#fff;
+  padding:9px 18px;border-radius:12px;
+  font-size:13px;font-weight:700;z-index:999;
+  transition:transform .26s cubic-bezier(.34,1.4,.64,1);
+  pointer-events:none;white-space:nowrap;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ═══ SETUP ═══ -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-hero">
+    <div>
+      <h1>川麻血战到底</h1>
+      <p class="tagline">四人实时记分 · 按键操作</p>
+    </div>
+    <div class="sh-room">
+      <div class="sh-room-label">房间码</div>
+      <div class="sh-room-code" id="room-code-display">------</div>
+    </div>
+  </div>
+
+  <div class="rules-card">
+    <span class="rc-title">房规设置</span>
+
+    <!-- 底分 -->
+    <div class="rc-section">
+      <div class="rc-label">底分 <span class="rc-hint">积分 = 底分 × 2^番数</span></div>
+      <div class="base-row" id="base-row">
+        <button class="base-btn sel" onclick="setBase(1)">1</button>
+        <button class="base-btn"     onclick="setBase(3)">3</button>
+        <button class="base-btn"     onclick="setBase(5)">5</button>
+        <button class="base-btn"     onclick="setBase(7)">7</button>
+        <button class="base-btn"     onclick="setBase(10)">10</button>
+      </div>
+    </div>
+
+    <div class="rc-divider"></div>
+
+    <!-- 自摸加底 -->
+    <div class="rc-section">
+      <label class="toggle-row" for="tog-zimo">
+        <div class="tr-info">
+          <div class="tr-label">自摸加底</div>
+          <div class="tr-sub">自摸时赢家额外每人多收 1底</div>
+        </div>
+        <div class="tog">
+          <input type="checkbox" id="tog-zimo" onchange="toggleZimoJiaDi(this.checked)">
+          <span class="tog-track"></span>
+        </div>
+      </label>
+    </div>
+
+    <div class="rc-divider"></div>
+
+    <!-- 流局罚底 -->
+    <div class="rc-section">
+      <div class="rc-label">流局罚底 <span class="rc-hint">无叫 → 每位有叫玩家各付</span></div>
+      <div class="base-row" id="liuju-row">
+        <button class="base-btn sel" onclick="setLiujuPenalty(1)">1底</button>
+        <button class="base-btn"     onclick="setLiujuPenalty(2)">2底</button>
+        <button class="base-btn"     onclick="setLiujuPenalty(3)">3底</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="setup-players" id="setup-players"></div>
+  <button class="btn-go" id="btn-start" disabled onclick="startGame()">开始游戏</button>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div class="screen" id="screen-game">
+  <div class="game-bar">
+    <div class="gb-left">
+      <div class="gb-round" id="gb-round">第 1 局</div>
+    </div>
+    <div class="gb-stats">
+      底<b id="gb-base" style="color:var(--text)">1</b>
+      &nbsp;·&nbsp;
+      <span id="gb-code" style="font-weight:800;color:var(--orange);letter-spacing:2px"></span>
+    </div>
+  </div>
+
+  <div class="player-grid" id="player-grid"></div>
+
+  <div class="action-panel">
+    <div class="ap-grid g5">
+      <button class="ab ab-win"  onclick="doAction('zimo')">自摸</button>
+      <button class="ab ab-win"  onclick="doAction('dianpao')">点炮</button>
+      <button class="ab ab-gang" onclick="doAction('angang')">暗杠</button>
+      <button class="ab ab-gang" onclick="doAction('zhigang')">直杠</button>
+      <button class="ab ab-gang" onclick="doAction('bugang')">补杠</button>
+    </div>
+    <div class="ap-grid g4">
+      <button class="ab ab-danger" onclick="doAction('liuju')">流局</button>
+      <button class="ab ab-danger" onclick="doAction('zhahu')">诈胡</button>
+      <button class="ab ab-danger" onclick="doAction('huazhu')">花猪</button>
+      <button class="ab ab-custom" onclick="doAction('custom')">自定义</button>
+    </div>
+    <div class="ap-grid g3" style="margin-top:3px">
+      <button class="ab ab-undo" onclick="doUndo()">↩ 撤销</button>
+      <button class="ab ab-next" onclick="doNextRound()">下一局</button>
+      <button class="ab ab-end"  onclick="doEndGame()">结束游戏</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ END ═══ -->
+<div class="screen" id="screen-end">
+  <div class="end-hero">
+    <h2>游戏结束 🎊</h2>
+    <p id="end-sub">共 1 局 · 最终排名</p>
+  </div>
+  <div class="end-list" id="end-list"></div>
+  <button class="btn-new" onclick="newGame()">再来一局</button>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-bg" id="modal-bg">
+  <div class="msheet" id="msheet">
+    <div class="mt" id="mt"></div>
+    <div class="mh" id="mh"></div>
+    <div id="mb"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+let G = {
+  roomCode: '',
+  players: [],    // {id, name, dir, score, wonRound}
+  round: 1,
+  base: 1,        // 底分
+  zimoJiaDi: false, // 自摸加底开关
+  liujuPenalty: 1,  // 流局无叫→有叫 每人付 N底
+  log: [],        // event log for history display
+  history: []     // [{players snapshot, logLen}] for undo
+};
+
+let M = {
+  action: '', winner: null, target: null, fan: 0, liuju: {}, targets: [], amount: 0
+};
+
+const DIRS = ['东','南','西','北'];
+const ACTION_LABEL = {
+  zimo:'自摸', dianpao:'点炮', angang:'暗杠', zhigang:'直杠', bugang:'补杠',
+  ganghua:'杠上花', gangpao:'杠上炮', qianggang:'抢杠胡', liuju:'流局', zhahu:'诈胡',
+  huazhu:'花猪', custom:'自定义赔付'
+};
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+function init() {
+  G.roomCode = randCode();
+  document.getElementById('room-code-display').textContent = G.roomCode;
+  for (let i = 0; i < 4; i++)
+    G.players.push({id:i, name:'', dir:null, score:0, wonRound:false});
+  renderSetup();
+  document.getElementById('modal-bg').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-bg')) hideModal();
+  });
+}
+
+function randCode() {
+  return Math.random().toString(36).substr(2,6).toUpperCase();
+}
+
+/* ══════════════════════════════════════
+   SETUP
+══════════════════════════════════════ */
+function renderSetup() {
+  const el = document.getElementById('setup-players');
+  el.innerHTML = '';
+  G.players.forEach((p, i) => {
+    const taken = G.players.filter((_,j) => j !== i).map(x => x.dir).filter(Boolean);
+    const d = document.createElement('div');
+    d.className = 'spc' + (p.name && p.dir ? ' ready' : '');
+    d.id = 'spc' + i;
+    d.innerHTML = `
+      <div class="spc-row">
+        <div class="spc-idx">${i+1}</div>
+        <input class="spc-inp" type="text" placeholder="输入名字…"
+          value="${escH(p.name)}" maxlength="8" oninput="onName(${i},this.value)">
+      </div>
+      <div class="dir-row">
+        ${DIRS.map(d => {
+          const isTaken = taken.includes(d) && p.dir !== d;
+          return `<button class="dir-btn${p.dir===d?' chosen':''}${isTaken?' taken':''}"
+            onclick="onDir(${i},'${d}')" ${isTaken?'disabled':''}>${d}</button>`;
+        }).join('')}
+      </div>`;
+    el.appendChild(d);
+  });
+  checkReady();
+}
+
+function onName(i, v) {
+  G.players[i].name = v.trim();
+  const c = document.getElementById('spc'+i);
+  if (c) c.className = 'spc' + (G.players[i].name && G.players[i].dir ? ' ready' : '');
+  checkReady();
+}
+
+function onDir(i, d) {
+  const clash = G.players.findIndex((p,j) => j !== i && p.dir === d);
+  if (clash >= 0) { showToast(d + '风已被 ' + G.players[clash].name + ' 占用'); return; }
+  G.players[i].dir = d;
+  renderSetup();
+}
+
+function checkReady() {
+  document.getElementById('btn-start').disabled = !G.players.every(p => p.name && p.dir);
+}
+
+function setBase(n) {
+  G.base = n;
+  document.querySelectorAll('#base-row .base-btn').forEach(b => {
+    b.classList.toggle('sel', parseInt(b.textContent) === n);
+  });
+}
+
+function toggleZimoJiaDi(on) {
+  G.zimoJiaDi = on;
+}
+
+function setLiujuPenalty(n) {
+  G.liujuPenalty = n;
+  document.querySelectorAll('#liuju-row .base-btn').forEach(b => {
+    b.classList.toggle('sel', parseInt(b.textContent) === n);
+  });
+}
+
+function startGame() {
+  if (!G.players.every(p => p.name && p.dir)) return;
+  document.getElementById('gb-code').textContent = G.roomCode;
+  document.getElementById('gb-base').textContent = G.base;
+  renderGame();
+  showScreen('game');
+}
+
+/* ══════════════════════════════════════
+   GAME RENDER — 2×2 MODULES
+══════════════════════════════════════ */
+function renderGame() {
+  document.getElementById('gb-round').textContent = '第 ' + G.round + ' 局';
+
+  // Determine rank order for badge
+  const sorted = [...G.players].sort((a,b) => b.score - a.score);
+  const rankMap = {};
+  sorted.forEach((p,i) => rankMap[p.id] = i+1);
+  const leaderId = sorted[0].id;
+
+  const grid = document.getElementById('player-grid');
+  grid.innerHTML = '';
+
+  // Keep original setup order (player 0 top-left ... player 3 bottom-right)
+  G.players.forEach(p => {
+    const rank = rankMap[p.id];
+    const isLeader = p.id === leaderId;
+    const sign = p.score > 0 ? '+' : '';
+    const cls = p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : 'zer';
+
+    // Build history items for this player (last 6 entries affecting them)
+    const myLog = G.log
+      .filter(e => e.changes[p.id] !== undefined && e.changes[p.id] !== 0)
+      .slice(-6)
+      .reverse();
+
+    const histHtml = myLog.length === 0
+      ? `<div class="pm-log-empty">暂无记录</div>`
+      : myLog.map(e => {
+          const d = e.changes[p.id];
+          const ds = (d > 0 ? '+' : '') + d;
+          const dcls = d > 0 ? 'pos' : 'neg';
+          return `<div class="pli">
+            <span class="pli-d ${dcls}">${ds}</span>
+            <span class="pli-t">${e.desc}</span>
+            <span class="pli-r">R${e.round}</span>
+          </div>`;
+        }).join('');
+
+    const cell = document.createElement('div');
+    cell.className = `pm${p.wonRound?' won':''}${isLeader?' leader':''}`;
+    cell.innerHTML = `
+      <div class="pm-head">
+        <div class="pm-dir">${p.dir}风</div>
+        <div class="pm-rank">#${rank}</div>
+      </div>
+      <div class="pm-name">${escH(p.name)}${p.wonRound ? '<span class="won-chip">已胡</span>' : ''}</div>
+      <div class="pm-score ${cls}">${sign}${p.score}</div>
+      <div class="pm-line"></div>
+      <div class="pm-log">${histHtml}</div>`;
+    grid.appendChild(cell);
+  });
+}
+
+function active() { return G.players.filter(p => !p.wonRound); }
+
+/* ══════════════════════════════════════
+   ACTION DISPATCH
+══════════════════════════════════════ */
+function doAction(action) {
+  const act = active();
+  if (act.length === 0) { showToast('所有人已胡牌，请下一局'); return; }
+  M = {action, winner:null, target:null, fan:0, liuju:{}, targets:[], amount:0};
+
+  switch(action) {
+    case 'zimo': case 'ganghua':
+      pickWinner(ACTION_LABEL[action]); break;
+    case 'dianpao': case 'gangpao': case 'qianggang':
+      pickWinner(ACTION_LABEL[action]); break;
+    case 'angang':
+      pickKonger('暗杠', '谁暗杠了？'); break;
+    case 'zhigang':
+      pickKonger('直杠', '谁直杠了？'); break;
+    case 'bugang':
+      pickKonger('补杠', '谁补杠了？'); break;
+    case 'liuju':
+      showLiuju(); break;
+    case 'zhahu':
+      pickZhahu(); break;
+    case 'huazhu':
+      pickHuazhu(); break;
+    case 'custom':
+      pickCustomPayer(); break;
+  }
+}
+
+function pickWinner(title) {
+  showModal(title, '谁胡了？', pgrid(active(), 'onWinner'));
+}
+function onWinner(id) { M.winner = id; pickFan(); }
+
+function pickFan() {
+  showModal(ACTION_LABEL[M.action], '选择番数（1–8番）', `
+    <div class="fan-hero">
+      <div class="fh-n" id="fhn">—</div>
+      <div class="fh-l">每人付出（底分 × 2^番）</div>
+    </div>
+    <div class="mgrid g4">
+      ${[1,2,3,4,5,6,7,8].map(n => {
+        const mult = Math.pow(2, n - 1);
+        const pts  = G.base * mult;
+        const sub  = G.base === 1
+          ? `×${mult}`
+          : `×${mult} = ${pts}`;
+        return `<button class="mb" id="fb${n}" onclick="onFan(${n})">${n}番<span class="mb-s">${sub}</span></button>`;
+      }).join('')}
+    </div>
+    <button class="mcancel" onclick="hideModal()">取消</button>
+  `);
+}
+
+function onFan(fan) {
+  M.fan = fan;
+  const pts = G.base * Math.pow(2, fan - 1);
+  const el = document.getElementById('fhn');
+  if (el) el.textContent = pts;
+  for(let i=1;i<=8;i++){const b=document.getElementById('fb'+i);if(b)b.className=i===fan?'mb sel':'mb';}
+  setTimeout(() => {
+    if (['dianpao','gangpao','qianggang'].includes(M.action)) pickDiscarder();
+    else if (M.action === 'huazhu') applyHuazhu();
+    else apply();
+  }, 180);
+}
+
+function pickDiscarder() {
+  const others = active().filter(p => p.id !== M.winner);
+  const hints = {dianpao:'谁点炮了？', gangpao:'杠上炮—谁点炮？', qianggang:'谁补杠被抢？'};
+  showModal(hints[M.action] || '选择目标', '', pgrid(others, 'onTarget'));
+}
+function onTarget(id) { M.target = id; setTimeout(apply, 130); }
+
+function pickKonger(title, hint) {
+  showModal(title, hint, pgrid(active(), 'onKonger'));
+}
+function onKonger(id) {
+  M.winner = id;
+  if (M.action === 'zhigang') {
+    const others = active().filter(p => p.id !== id);
+    showModal('直杠', '谁打出的牌？', pgrid(others, 'onTarget'));
+  } else apply();
+}
+
+function pickZhahu() {
+  showModal('诈胡', '谁诈胡了？', pgrid(active(), 'applyZhahu'));
+}
+
+/* ── 花猪：选玩家 → 选番数 → 赔付其余所有人 ── */
+function pickHuazhu() {
+  // 花猪可对所有4人（含已胡）检查
+  showModal('花猪 🐷', '谁是花猪（三门未缺色）？', pgrid(G.players, 'onHuazhuPlayer'));
+}
+function onHuazhuPlayer(id) {
+  M.winner = id; // 复用 winner 字段存花猪玩家
+  M.action = 'huazhu';
+  pickFan();     // 选番数（手牌最大番，用于计算赔付）
+}
+function applyHuazhu() {
+  // 花猪赔付：按番数赔给每位其他玩家（同自摸逻辑，但不受已胡限制）
+  hideModal();
+  const base = G.base * Math.pow(2, M.fan - 1);
+  const pig = G.players.find(p => p.id === M.winner);
+  const others = G.players.filter(p => p.id !== M.winner);
+  const changes = {};
+  snap();
+  let tot = 0;
+  others.forEach(p => {
+    p.score += base; changes[p.id] = base; tot += base;
+  });
+  pig.score -= tot; changes[pig.id] = -tot;
+  pushLog(`花猪 ${M.fan}番`, changes);
+  showToast(`${pig.name} 花猪 ${M.fan}番，赔 ${tot}`);
+  renderGame();
+}
+/* ── 自定义赔付：选付款方 → 多选收款方 → 选金额 ── */
+function pickCustomPayer() {
+  showModal('自定义赔付', '谁付分？', pgrid(G.players, 'onCustomPayer'));
+}
+function onCustomPayer(id) {
+  M.winner = id;
+  M.targets = [];
+  pickCustomRecipients();
+}
+function pickCustomRecipients() {
+  const others = G.players.filter(p => p.id !== M.winner);
+  const payer = G.players.find(p => p.id === M.winner);
+  const sel = M.targets;
+  const btns = others.map(p => `
+    <button class="mb ${sel.includes(p.id)?'sel':''}" onclick="toggleCustomTarget(${p.id})">
+      ${escH(p.name)}<span class="mb-s">${p.dir}风 · ${p.score>=0?'+':''}${p.score}</span>
+    </button>`).join('');
+  const allBtn = `
+    <button class="mb ${sel.length===others.length?'org':''}" onclick="toggleAllCustomTargets()" style="grid-column:1/-1;padding:12px">
+      全选
+    </button>`;
+  showModal('自定义赔付',
+    `${escH(payer.name)} 付给谁？（可多选）`,
+    `<div class="mgrid g3">${btns}</div>
+     <div class="mgrid g1" style="margin-top:-1px">${allBtn}</div>
+     <button class="mconfirm" ${sel.length>0?'':'disabled'} onclick="pickCustomAmount()">下一步 →</button>
+     <button class="mcancel" onclick="hideModal()">取消</button>`
+  );
+}
+function toggleCustomTarget(id) {
+  if (M.targets.includes(id)) M.targets = M.targets.filter(x => x !== id);
+  else M.targets.push(id);
+  pickCustomRecipients();
+}
+function toggleAllCustomTargets() {
+  const others = G.players.filter(p => p.id !== M.winner);
+  M.targets = M.targets.length === others.length ? [] : others.map(p => p.id);
+  pickCustomRecipients();
+}
+function pickCustomAmount() {
+  if (!M.targets.length) return;
+  const payer = G.players.find(p => p.id === M.winner);
+  const recNames = M.targets.map(id => G.players.find(p=>p.id===id).name).join('、');
+  const fanBtns = [1,2,3,4,5,6,7,8].map(n => {
+    const pts = G.base * Math.pow(2, n - 1);
+    return `<button class="mb" onclick="onCustomFan(${n})">${n}番<span class="mb-s">${pts}分</span></button>`;
+  }).join('');
+  showModal('自定义赔付',
+    `${escH(payer.name)} → ${escH(recNames)}，各付多少？`,
+    `<div class="mgrid g4">${fanBtns}</div>
+     <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+       <input type="number" id="custom-amt-inp" placeholder="手动输入分数" min="1"
+         style="flex:1;height:46px;border:2px solid #E8E8E8;border-radius:11px;
+                padding:0 13px;font-size:15px;font-weight:700;color:#0D0D0D;outline:none;
+                -webkit-appearance:none">
+       <button class="mb org" style="flex-shrink:0;height:46px;padding:0 18px;border-radius:11px"
+         onclick="onCustomManual()">确认</button>
+     </div>
+     <button class="mcancel" style="margin-top:6px" onclick="pickCustomRecipients()">← 返回</button>`
+  );
+}
+function onCustomFan(n) {
+  M.amount = G.base * Math.pow(2, n - 1);
+  setTimeout(applyCustom, 160);
+}
+function onCustomManual() {
+  const inp = document.getElementById('custom-amt-inp');
+  const v = parseInt(inp ? inp.value : '');
+  if (!v || v <= 0) { showToast('请输入有效分数'); return; }
+  M.amount = v;
+  applyCustom();
+}
+function applyCustom() {
+  hideModal(); snap();
+  const payer = G.players.find(p => p.id === M.winner);
+  const changes = {};
+  let tot = 0;
+  M.targets.forEach(id => {
+    const rec = G.players.find(p => p.id === id);
+    rec.score += M.amount;
+    changes[id] = (changes[id] || 0) + M.amount;
+    tot += M.amount;
+  });
+  payer.score -= tot;
+  changes[M.winner] = -tot;
+  const recNames = M.targets.map(id => G.players.find(p=>p.id===id).name).join('、');
+  pushLog(`自定义赔付 ${M.amount}分`, changes);
+  showToast(`${payer.name} 付 ${tot} → ${recNames}`);
+  renderGame();
+}
+
+function applyZhahu(id) {
+  hideModal(); snap();
+  const act = active();
+  const p = G.players.find(x => x.id === id);
+  const others = act.filter(x => x.id !== id);
+  const changes = {};
+  const zp = 8 * G.base;
+  others.forEach(o => { o.score += zp; p.score -= zp; changes[o.id] = zp; });
+  changes[p.id] = -(others.length * zp);
+  pushLog('诈胡', changes);
+  showToast(`${p.name} 诈胡，赔 ${others.length * zp}`);
+  renderGame();
+}
+
+/* ══════════════════════════════════════
+   APPLY SCORES
+══════════════════════════════════════ */
+function apply() {
+  hideModal();
+  const act = active();
+  const base = M.fan > 0 ? G.base * Math.pow(2, M.fan - 1) : 0;
+  const winner = G.players.find(p => p.id === M.winner);
+  const target = M.target != null ? G.players.find(p => p.id === M.target) : null;
+  const label = ACTION_LABEL[M.action];
+  const fan = M.fan > 0 ? ' ' + M.fan + '番' : '';
+  snap();
+  const changes = {};
+
+  switch(M.action) {
+
+    case 'zimo': case 'ganghua': {
+      // 自摸加底：每人额外付1底（杠上花不加底）
+      const extra = (M.action === 'zimo' && G.zimoJiaDi) ? G.base : 0;
+      let tot = 0;
+      act.forEach(p => {
+        if(p.id !== M.winner){
+          const pay = base + extra;
+          p.score -= pay; changes[p.id] = -pay; tot += pay;
+        }
+      });
+      winner.score += tot; changes[M.winner] = tot;
+      winner.wonRound = true;
+      pushLog(label + fan + (extra ? '+底' : ''), changes);
+      showToast(`${winner.name} ${label}${fan}${extra ? '（加底）' : ''}，+${tot}`);
+      break;
+    }
+
+    case 'dianpao': case 'gangpao': case 'qianggang': {
+      const payout = (act.length - 1) * base;
+      winner.score += payout; target.score -= payout;
+      changes[M.winner] = payout; changes[M.target] = -payout;
+      winner.wonRound = true;
+      pushLog(label + fan, changes);
+      showToast(`${winner.name} ${label}${fan}，${target.name} 付 ${payout}`);
+      break;
+    }
+
+    case 'angang': {
+      const u = 2 * G.base;
+      let tot = 0;
+      act.forEach(p => { if(p.id !== M.winner){ p.score -= u; changes[p.id] = -u; tot += u; }});
+      winner.score += tot; changes[M.winner] = tot;
+      pushLog('暗杠', changes);
+      showToast(`${winner.name} 暗杠，+${tot}`);
+      break;
+    }
+
+    case 'zhigang': {
+      const u = 1 * G.base;
+      winner.score += u; target.score -= u;
+      changes[M.winner] = u; changes[M.target] = -u;
+      pushLog('直杠', changes);
+      showToast(`${winner.name} 直杠，${target.name} 付 ${u}`);
+      break;
+    }
+
+    case 'bugang': {
+      const u = 1 * G.base;
+      let tot = 0;
+      act.forEach(p => { if(p.id !== M.winner){ p.score -= u; changes[p.id] = -u; tot += u; }});
+      winner.score += tot; changes[M.winner] = tot;
+      pushLog('补杠', changes);
+      showToast(`${winner.name} 补杠，+${tot}`);
+      break;
+    }
+  }
+
+  renderGame();
+  const wonCount = G.players.filter(p => p.wonRound).length;
+  if (wonCount >= 3) setTimeout(() => showToast('三家已胡 · 请下一局'), 700);
+}
+
+/* ══════════════════════════════════════
+   LIUJU
+══════════════════════════════════════ */
+function showLiuju() {
+  active().forEach(p => { M.liuju[p.id] = null; });
+  renderLiujuModal();
+}
+
+function renderLiujuModal() {
+  const act = active();
+  const allSet = act.every(p => M.liuju[p.id] !== null);
+  const rows = act.map(p => `
+    <div class="lj-item">
+      <div class="lj-info">
+        <div class="lj-name">${escH(p.name)}</div>
+        <div class="lj-sub">${p.dir}风 · 当前 ${p.score >= 0 ? '+':''}${p.score}</div>
+      </div>
+      <div class="lj-btns">
+        <button class="lj-btn ${M.liuju[p.id]==='have'?'sh':''}" onclick="setLiuju(${p.id},'have')">有叫</button>
+        <button class="lj-btn ${M.liuju[p.id]==='none'?'sn':''}" onclick="setLiuju(${p.id},'none')">无叫</button>
+      </div>
+    </div>`).join('');
+  showModal('流局 · 查叫', '选择每位玩家状态', `
+    <div style="margin-bottom:10px">${rows}</div>
+    <button class="mconfirm" ${allSet?'':'disabled'} onclick="applyLiuju()">确认结算</button>
+    <button class="mcancel" onclick="hideModal()">取消</button>
+  `);
+}
+
+function setLiuju(id, s) { M.liuju[id] = s; renderLiujuModal(); }
+
+function applyLiuju() {
+  const act = active();
+  if (!act.every(p => M.liuju[p.id] !== null)) return;
+  hideModal(); snap();
+  const haves = act.filter(p => M.liuju[p.id] === 'have');
+  const nones = act.filter(p => M.liuju[p.id] === 'none');
+  if (!haves.length || !nones.length) { showToast('流局平局，无结算'); return; }
+  const changes = {};
+  const lp = G.liujuPenalty * G.base;
+  nones.forEach(np => {
+    haves.forEach(hp => {
+      np.score -= lp; hp.score += lp;
+      changes[np.id] = (changes[np.id] || 0) - lp;
+      changes[hp.id] = (changes[hp.id] || 0) + lp;
+    });
+  });
+  pushLog('流局', changes);
+  showToast(`流局：${haves.map(p=>p.name).join('、')} 有叫，结算完成`);
+  renderGame();
+}
+
+/* ══════════════════════════════════════
+   UNDO / NEXT / END
+══════════════════════════════════════ */
+function doUndo() {
+  if (!G.history.length) { showToast('没有可撤销的操作'); return; }
+  const snap = G.history.pop();
+  G.players = snap.players;
+  G.log.length = snap.logLen;
+  renderGame(); showToast('已撤销上一步');
+}
+
+function doNextRound() {
+  G.round++;
+  G.players.forEach(p => { p.wonRound = false; });
+  G.history = [];
+  renderGame(); showToast('第 ' + G.round + ' 局开始！');
+}
+
+function doEndGame() {
+  showScreen('end');
+  document.getElementById('end-sub').textContent = '共 ' + G.round + ' 局 · 最终排名';
+  const sorted = [...G.players].sort((a,b) => b.score - a.score);
+  const medals = ['🥇','🥈','🥉','4'];
+
+  // Stats per player
+  const stats = {};
+  G.players.forEach(p => {
+    stats[p.id] = {wins:0, gangs:0, losses:0};
+  });
+  G.log.forEach(e => {
+    Object.entries(e.changes).forEach(([id, d]) => {
+      const num = parseInt(id);
+      if (['自摸','点炮','杠上花','杠上炮','抢杠胡'].some(l => e.desc.startsWith(l))) {
+        if (d > 0) stats[num].wins++;
+        else if (d < 0) stats[num].losses++;
+      } else if (['暗杠','直杠','补杠'].some(l => e.desc.startsWith(l))) {
+        if (d > 0) stats[num].gangs++;
+      }
+    });
+  });
+
+  document.getElementById('end-list').innerHTML = sorted.map((p,i) => {
+    const isTop = i === 0;
+    const sign = p.score > 0 ? '+' : '';
+    const cls = isTop ? '' : (p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : 'zer');
+    const st = stats[p.id];
+    return `
+      <div class="ecard ${isTop?'top':''}">
+        <div class="ec-rank">${medals[i]}</div>
+        <div class="ec-info">
+          <div class="ec-name">${escH(p.name)}</div>
+          <div class="ec-dir">${p.dir}风</div>
+          <div class="ec-hist">
+            <div class="ec-hist-row">
+              <span class="ec-hist-label">胡牌次数</span>
+              <span class="ec-hist-val">${st.wins} 次</span>
+            </div>
+            <div class="ec-hist-row">
+              <span class="ec-hist-label">被炮次数</span>
+              <span class="ec-hist-val">${st.losses} 次</span>
+            </div>
+          </div>
+        </div>
+        <div class="ec-score ${cls}">${sign}${p.score}</div>
+      </div>`;
+  }).join('');
+}
+
+function newGame() {
+  G = {roomCode:randCode(), players:[], round:1, base:1,
+       zimoJiaDi:false, liujuPenalty:1, log:[], history:[]};
+  M = {action:'', winner:null, target:null, fan:0, liuju:{}, targets:[], amount:0};
+  document.getElementById('room-code-display').textContent = G.roomCode;
+  const togEl = document.getElementById('tog-zimo');
+  if (togEl) togEl.checked = false;
+  setBase(1);
+  setLiujuPenalty(1);
+  for (let i=0;i<4;i++) G.players.push({id:i, name:'', dir:null, score:0, wonRound:false});
+  renderSetup();
+  showScreen('setup');
+}
+
+/* ══════════════════════════════════════
+   HELPERS
+══════════════════════════════════════ */
+function snap() {
+  G.history.push({players: G.players.map(p=>({...p})), logLen: G.log.length});
+}
+
+function pushLog(desc, changes) {
+  G.log.push({round: G.round, desc, changes: {...changes}});
+}
+
+function pgrid(players, cb) {
+  const cols = players.length <= 2 ? 'g2' : players.length === 3 ? 'g3' : 'g2';
+  return `
+    <div class="mgrid ${cols}">
+      ${players.map(p=>`<button class="mb" onclick="${cb}(${p.id})">
+        ${escH(p.name)}<span class="mb-s">${p.dir}风 · ${p.score>=0?'+':''}${p.score}</span>
+      </button>`).join('')}
+    </div>
+    <button class="mcancel" onclick="hideModal()">取消</button>`;
+}
+
+function showModal(title, hint, html) {
+  document.getElementById('mt').textContent = title;
+  document.getElementById('mh').textContent = hint;
+  document.getElementById('mb').innerHTML = html;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function hideModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+let _tt = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  if (_tt) clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function escH(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
